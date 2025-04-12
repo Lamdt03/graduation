@@ -9,8 +9,9 @@
     "@testing-library/user-event": "^13.5.0",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.126",
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.1",
+    "diff": "^7.0.0",
+    "electron": "^35.1.5",
+    "electron-builder": "^26.0.12",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.5.0",
@@ -42,5 +43,10 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@types/diff": "^7.0.2",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.2"
   }
 }

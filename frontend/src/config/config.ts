@@ -1,1 +1,0 @@
-export const FILE_COMPARER_API_HOST = process.env.FILE_COMPARER_API_HOST || 'http://compare.server:8080';
