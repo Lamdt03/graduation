@@ -2,8 +2,7 @@ package main
 
 import (
 	"crypto/md5"
-	"encoding/gob"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -13,6 +12,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 const blockSize = 4096
@@ -22,9 +22,16 @@ type BlockHash struct {
 	Hash   string `json:"hash"`
 }
 
+type ChangedBlock struct {
+	Offset  int64  `json:"offset"`
+	Hash    string `json:"hash"`
+	Content string `json:"content"`
+}
+
 type VersioningService struct {
 	fiRepo      *repository.FileInfoRepository
 	MonitorPath string
+	HomePath    string
 }
 
 func (v *VersioningService) StartMonitor() {
@@ -78,7 +85,7 @@ func (v *VersioningService) StartMonitor() {
 
 func hashBlock(data []byte) string {
 	h := md5.Sum(data)
-	return hex.EncodeToString(h[:])
+	return fmt.Sprintf("%x", h[:])
 }
 
 func scanFileBlocks(filePath string) ([]BlockHash, error) {
@@ -116,7 +123,7 @@ func saveHashes(hashes []BlockHash, path string) error {
 	defer f.Close()
 
 	encoder := json.NewEncoder(f)
-	encoder.SetIndent("", "  ") // pretty print
+	encoder.SetIndent("", "  ")
 	return encoder.Encode(hashes)
 }
 
@@ -128,21 +135,21 @@ func loadHashes(path string) ([]BlockHash, error) {
 	defer f.Close()
 
 	var hashes []BlockHash
-	err = gob.NewDecoder(f).Decode(&hashes)
+	err = json.NewDecoder(f).Decode(&hashes)
 	return hashes, err
 }
 
-func saveChangedBlocks(filePath string, oldHashes []BlockHash, outputDir string) error {
+func saveChangedBlocks(filePath string, oldHashes []BlockHash, outputPath string) error {
 	f, err := os.Open(filePath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	os.MkdirAll(outputDir, 0755)
+	var changedBlocks []ChangedBlock
 	buf := make([]byte, blockSize)
-	var offset int64 = 0
 	i := 0
+	var offset int64 = 0
 
 	for {
 		n, err := f.Read(buf)
@@ -150,10 +157,15 @@ func saveChangedBlocks(filePath string, oldHashes []BlockHash, outputDir string)
 			break
 		}
 
-		newHash := hashBlock(buf[:n])
+		blockData := buf[:n]
+		newHash := hashBlock(blockData)
 		if i >= len(oldHashes) || oldHashes[i].Hash != newHash {
-			blockFile := filepath.Join(outputDir, fmt.Sprintf("block_%d", i))
-			os.WriteFile(blockFile, buf[:n], 0644)
+			encoded := base64.StdEncoding.EncodeToString(blockData)
+			changedBlocks = append(changedBlocks, ChangedBlock{
+				Offset:  offset,
+				Hash:    newHash,
+				Content: encoded,
+			})
 		}
 
 		offset += int64(n)
@@ -165,48 +177,46 @@ func saveChangedBlocks(filePath string, oldHashes []BlockHash, outputDir string)
 			return err
 		}
 	}
-	return nil
+
+	outFile, err := os.Create(outputPath)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	encoder := json.NewEncoder(outFile)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(changedBlocks)
 }
 
-func restoreFile(fullPath string, deltaDir string, outputPath string) error {
-	full, err := os.Open(fullPath)
+func restoreFile(jsonPath, outputFilePath string) error {
+	// Mở và đọc file JSON chứa các block thay đổi
+	f, err := os.Open(jsonPath)
 	if err != nil {
 		return err
 	}
-	defer full.Close()
+	defer f.Close()
 
-	out, err := os.Create(outputPath)
+	var blocks []ChangedBlock
+	if err := json.NewDecoder(f).Decode(&blocks); err != nil {
+		return err
+	}
+
+	// Tạo (hoặc mở) file đích để ghi dữ liệu
+	outFile, err := os.OpenFile(outputFilePath, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer outFile.Close()
 
-	buf := make([]byte, blockSize)
-	blockIndex := 0
-
-	for {
-		n, err := full.Read(buf)
-		if n <= 0 {
-			break
+	// Ghi từng block vào vị trí offset tương ứng
+	for _, block := range blocks {
+		data, err := base64.StdEncoding.DecodeString(block.Content)
+		if err != nil {
+			return fmt.Errorf("decode error at offset %d: %w", block.Offset, err)
 		}
-
-		deltaPath := filepath.Join(deltaDir, fmt.Sprintf("block_%d", blockIndex))
-		var dataToWrite []byte
-
-		if _, err := os.Stat(deltaPath); err == nil {
-			dataToWrite, _ = os.ReadFile(deltaPath)
-		} else {
-			dataToWrite = buf[:n]
-		}
-
-		if _, err := out.Write(dataToWrite); err != nil {
-			return err
-		}
-
-		blockIndex++
-
-		if err == io.EOF {
-			break
+		if _, err := outFile.WriteAt(data, block.Offset); err != nil {
+			return fmt.Errorf("write error at offset %d: %w", block.Offset, err)
 		}
 	}
 
@@ -239,13 +249,18 @@ func (v *VersioningService) HandleDeleteAction(filepath string) error {
 	return nil
 }
 
-func (v *VersioningService) HandleWriteAction(filepath string) error {
-	blocks, err := scanFileBlocks(filepath)
+func (v *VersioningService) HandleWriteAction(path, timestamp string) error {
+	blocks, err := scanFileBlocks(path)
 	if err != nil {
 		return fmt.Errorf("ScanFileBlocks error: %v", err)
 	}
+	fi, err := v.fiRepo.GetFileInfo(path)
+	if err != nil {
+		return fmt.Errorf("GetFileInfo error: %v", err)
+	}
+	versionPath := filepath.Join(v.HomePath, fi.ID, timestamp)
 	for _, block := range blocks {
-		
+		blockPath := filepath.Join(versionPath, strconv.Itoa(int(block.Offset)))
 	}
 }
 

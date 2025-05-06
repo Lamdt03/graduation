@@ -17,15 +17,15 @@ func NewFileInfo(filepath string) *FileInfo {
 	}
 }
 
-func (f *FileInfo) BeforeCreate(db *gorm.DB) error {
+func (v *FileInfo) BeforeCreate(db *gorm.DB) error {
 	for {
-		if f.ID == "" {
-			f.ID = uuid.NewString()
+		if v.ID == "" {
+			v.ID = uuid.NewString()
 		}
 
 		// Check if the generated ID already exists in the database
 		var count int64
-		if err := db.Model(&FileInfo{}).Where("id = ?", f.ID).Count(&count).Error; err != nil {
+		if err := db.Model(&FileInfo{}).Where("id = ?", v.ID).Count(&count).Error; err != nil {
 			return err // Return if there's an error while querying
 		}
 
@@ -35,7 +35,7 @@ func (f *FileInfo) BeforeCreate(db *gorm.DB) error {
 		}
 
 		// Generate a new UUID if there's a conflict
-		f.ID = uuid.NewString()
+		v.ID = uuid.NewString()
 	}
 
 	return nil
