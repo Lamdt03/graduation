@@ -10,6 +10,12 @@ type FileInfoRepository struct {
 	Db *gorm.DB
 }
 
+func NewFileInfoRepository(db *gorm.DB) *FileInfoRepository {
+	return &FileInfoRepository{
+		Db: db,
+	}
+}
+
 func (f *FileInfoRepository) GetFileInfo(filepath string) (*model.FileInfo, error) {
 	var fi model.FileInfo
 	err := f.Db.Where("filepath = ?", filepath).First(&fi)
