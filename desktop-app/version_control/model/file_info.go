@@ -5,19 +5,19 @@ import (
 	"gorm.io/gorm"
 )
 
-type FileInfo struct {
+type FileInfos struct {
 	ID       string    `json:"id" gorm:"column:id;primaryKey"`
 	Filepath string    `json:"filepath" gorm:"column:filepath"`
-	Versions []Version `json:"versions" gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	Versions []Version `json:"versions" gorm:"foreignKey:FileId;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }
 
-func NewFileInfo(filepath string) *FileInfo {
-	return &FileInfo{
+func NewFileInfo(filepath string) *FileInfos {
+	return &FileInfos{
 		Filepath: filepath,
 	}
 }
 
-func (v *FileInfo) BeforeCreate(db *gorm.DB) error {
+func (v *FileInfos) BeforeCreate(db *gorm.DB) error {
 	for {
 		if v.ID == "" {
 			v.ID = uuid.NewString()
@@ -25,7 +25,7 @@ func (v *FileInfo) BeforeCreate(db *gorm.DB) error {
 
 		// Check if the generated ID already exists in the database
 		var count int64
-		if err := db.Model(&FileInfo{}).Where("id = ?", v.ID).Count(&count).Error; err != nil {
+		if err := db.Model(&FileInfos{}).Where("id = ?", v.ID).Count(&count).Error; err != nil {
 			return err // Return if there's an error while querying
 		}
 

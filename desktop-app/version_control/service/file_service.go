@@ -1,11 +1,12 @@
 package service
 
 import (
+	"desktop-app/version_control/model"
+	"desktop-app/version_control/repository"
 	"encoding/json"
 	"fmt"
 	"git.cystack.org/endpoint/dlp/file_monitor"
-	"graduation/version_control/model"
-	"graduation/version_control/repository"
+
 	"io"
 	"os"
 	"path/filepath"
@@ -79,6 +80,11 @@ func (v *FileService) StartMonitor() {
 		}
 	}()
 	fileMonitor.StartMonitor()
+
+	for {
+		e := <-fileMonitor.ErrChan
+		fmt.Print(e)
+	}
 }
 
 func (v *FileService) HandleMoveAction(oldPath string, newPath string) error {
@@ -118,6 +124,22 @@ func (v *FileService) HandleWriteAction(sourceFile string) error {
 	}
 	return nil
 }
+
+func (v *FileService) ListVersion(filepath string) ([]string, error) {
+	fi, err := v.fiRepo.GetFileInfo(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("GetFileInfo error: %v", err)
+	}
+	versions, err := ListBackupVersions(filepath, fi.ID)
+	if err != nil {
+		return nil, fmt.Errorf(fmt.Sprintf("Failed to list backup versions: %v", err))
+	}
+	return versions, nil
+}
+
+//func (v *FileService) RestoreVersion(filepath, dir, version string) error {
+//	err := RestoreFile(filepath, dir, version)
+//}
 
 const blockSize = 4096 // 4KB blocks
 
