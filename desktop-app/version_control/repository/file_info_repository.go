@@ -1,10 +1,10 @@
 package repository
 
 import (
-	"desktop-app/version_control/model"
 	"errors"
 	"fmt"
 	"gorm.io/gorm"
+	"graduation/desktop-app/version_control/model"
 )
 
 type FileInfoRepository struct {

@@ -1,11 +1,11 @@
 package service
 
 import (
-	"desktop-app/version_control/model"
-	"desktop-app/version_control/repository"
 	"encoding/json"
 	"fmt"
 	"git.cystack.org/endpoint/dlp/file_monitor"
+	"graduation/desktop-app/version_control/model"
+	"graduation/desktop-app/version_control/repository"
 
 	"io"
 	"os"
@@ -39,6 +39,7 @@ func (v *FileService) StartMonitor() {
 				if filepath.Ext(inf.Path) == "" {
 					continue
 				}
+				fmt.Println(inf.Path)
 				switch inf.Transition {
 				case "CREATE":
 					{
