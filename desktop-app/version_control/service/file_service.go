@@ -138,9 +138,17 @@ func (v *FileService) ListVersion(filepath string) ([]string, error) {
 	return versions, nil
 }
 
-//func (v *FileService) RestoreVersion(filepath, dir, version string) error {
-//	err := RestoreFile(filepath, dir, version)
-//}
+func (v *FileService) RestoreVersion(filePath, timestamp, version string) error {
+	fi, err := v.fiRepo.GetFileInfo(filePath)
+	if err != nil {
+		return fmt.Errorf("GetFileInfo error: %v", err)
+	}
+	err = RestoreFile(fi.ID, timestamp, version)
+	if err != nil {
+		return fmt.Errorf("RestoreFile error: %v", err)
+	}
+	return nil
+}
 
 const blockSize = 4096 // 4KB blocks
 
@@ -288,10 +296,10 @@ func shouldBackupBlock(previousBlocks []Block, offset int, currentContent []byte
 }
 
 // RestoreFile restores a file to a specific backup version identified by timestamp
-func RestoreFile(sourcePath, backupDir, timestamp string) error {
+func RestoreFile(fileId, timestamp, dest string) error {
 	// Construct the backup file path
-	backupFilename := fmt.Sprintf("%s_%s.json", filepath.Base(sourcePath), timestamp)
-	backupPath := filepath.Join(backupDir, backupFilename)
+	backupFilename := fmt.Sprintf("%s_%s.json", filepath.Base(fileId), timestamp)
+	backupPath := filepath.Join(fileId, backupFilename)
 
 	// Open the backup file
 	backupFile, err := os.Open(backupPath)
@@ -307,7 +315,7 @@ func RestoreFile(sourcePath, backupDir, timestamp string) error {
 	}
 
 	// Create or open the destination file for restoration
-	destFile, err := os.Create(sourcePath)
+	destFile, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("failed to create destination file: %v", err)
 	}

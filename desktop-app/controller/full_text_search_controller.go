@@ -15,13 +15,13 @@ import (
 const indexPath = "search.bleve"
 
 type Location struct {
-	Col int
-	Row int
+	Col int `json:"col"`
+	Row int `json:"row"`
 }
 
 type LocationsFile struct {
-	Locations []Location
-	Filename  string
+	Locations []Location `json:"locations"`
+	Filename  string     `json:"filename"`
 }
 
 type SearchController struct {
@@ -145,7 +145,7 @@ func extractContent(path string) (string, error) {
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
 	case ".docx":
-		res, err := docconv.ConvertPath("C:\\Users\\lamdt\\GolandProjects\\graduation\\test_data\\docxFile\\complex_file1.docx")
+		res, err := docconv.ConvertPath(path)
 		if err != nil {
 			return "", err
 		}

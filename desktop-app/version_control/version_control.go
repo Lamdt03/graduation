@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"graduation/desktop-app/version_control/model"
-	"graduation/desktop-app/version_control/repository"
 	"graduation/desktop-app/version_control/service"
 	"os"
 )
@@ -36,43 +34,43 @@ func Config() (*gorm.DB, error) {
 	return db, nil
 }
 
-//func main() {
-//
-//	sourceFile := "test.txt"
-//	backupDir := "idalbkdj"
-//
-//	// List available backup versions
-//	versions, err := service.ListBackupVersions(sourceFile, backupDir)
-//	if err != nil {
-//		fmt.Printf("Failed to list backup versions: %v\n", err)
-//		return
-//	}
-//
-//	if len(versions) == 0 {
-//		fmt.Println("No backup versions found")
-//		return
-//	}
-//
-//	fmt.Println("Available backup versions:")
-//	for i, version := range versions {
-//		fmt.Printf("%d: %s\n", i+1, version)
-//	}
-//
-//	// Example: Restore to the latest version
-//	if err := service.RestoreFile(sourceFile, backupDir, versions[5]); err != nil {
-//		fmt.Printf("Restore failed: %v\n", err)
-//		return
-//	}
-//	fmt.Println("File restored successfully")
-//}
-
 func main() {
-	db, err := Config()
+
+	sourceFile := "837c96ed-c928-4e43-8bcb-6f13a1e3087e"
+	backupDir := "/Users/lamdt/GolandProjects/graduation/837c96ed-c928-4e43-8bcb-6f13a1e3087e"
+
+	// List available backup versions
+	versions, err := service.ListBackupVersions(sourceFile, backupDir)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Failed to list backup versions: %v\n", err)
+		return
 	}
-	db.AutoMigrate(model.FileInfos{}, model.Version{})
-	fileRepo := repository.NewFileInfoRepository(db)
-	fileService := service.NewFileService(fileRepo, "/Users/lamdt/GolandProjects/graduation/desktop-app/version_control")
-	fileService.StartMonitor()
+
+	if len(versions) == 0 {
+		fmt.Println("No backup versions found")
+		return
+	}
+
+	fmt.Println("Available backup versions:")
+	for i, version := range versions {
+		fmt.Printf("%d: %s\n", i+1, version)
+	}
+
+	// Example: Restore to the latest version
+	if err := service.RestoreFile(sourceFile, backupDir, versions[1]); err != nil {
+		fmt.Printf("Restore failed: %v\n", err)
+		return
+	}
+	fmt.Println("File restored successfully")
 }
+
+//func main() {
+//	db, err := Config()
+//	if err != nil {
+//		panic(err)
+//	}
+//	db.AutoMigrate(model.FileInfos{}, model.Version{})
+//	fileRepo := repository.NewFileInfoRepository(db)
+//	fileService := service.NewFileService(fileRepo, "/Users/lamdt/GolandProjects/graduation/desktop-app/version_control")
+//	fileService.StartMonitor()
+//}
