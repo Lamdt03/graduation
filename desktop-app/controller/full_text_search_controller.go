@@ -35,6 +35,7 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 
 	mapping := bleve.NewIndexMapping()
 	index, err := bleve.New(indexPath, mapping)
+	defer index.Close()
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create index: %v", err)
 	}
@@ -58,6 +59,11 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 				return filepath.SkipDir
 			}
 			return nil
+		} else {
+			ext := filepath.Ext(path)
+			if ext != fileExtension {
+				return nil
+			}
 		}
 
 		// Only process files

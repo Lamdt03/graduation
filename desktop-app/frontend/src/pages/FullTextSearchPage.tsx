@@ -1,5 +1,5 @@
 
-import FullTextSearch from "../components/FulllTextSearch";
+import FullTextSearch from "../components/FullTextSearch";
 
 const FullTextSearchPage = () => {
     return <div><FullTextSearch/></div>;

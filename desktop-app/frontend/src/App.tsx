@@ -1,22 +1,24 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import {BrowserRouter as Router, Route, Routes} from 'react-router-dom';
 import Menu from './components/Menu';
 import TextPage from './pages/TextPage';
 import ExcelPage from './pages/ExcelPage';
 import TextFolderPage from './pages/TextFolderPage';
 import ExcelFolderPage from "./pages/ExcelFolderPage";
+import FullTextSearchPage from "./pages/FullTextSearchPage";
 
 const App: React.FC = () => {
     return (
         <Router> {}
             <div className="layout">
-                <Menu />
+                <Menu/>
                 <div className="content">
                     <Routes>
-                        <Route path="/text" element={<TextPage />} />
-                        <Route path="/excel" element={<ExcelPage />} />
-                        <Route path="/text-folder" element={<TextFolderPage />} />
-                        <Route path="/excel-folder" element={<ExcelFolderPage />} />
+                        <Route path="/text" element={<TextPage/>}/>
+                        <Route path="/excel" element={<ExcelPage/>}/>
+                        <Route path="/text-folder" element={<TextFolderPage/>}/>
+                        <Route path="/excel-folder" element={<ExcelFolderPage/>}/>
+                        <Route path="/full-text-search" element={<FullTextSearchPage/>}/>
                     </Routes>
                 </div>
             </div>
