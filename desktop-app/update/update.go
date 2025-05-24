@@ -1,0 +1,40 @@
+package update
+
+import (
+	"github.com/Lamdt03/selfupdate"
+	"golang.org/x/crypto/ed25519"
+	"graduation/desktop-app/build"
+	"log"
+	"os"
+	"time"
+)
+
+const host = "https://pub-2a8c9d2f04054734a96e69531440101d.r2.dev/file-monitor.json"
+
+func AutoUpdate() {
+	// Used `selfupdatectl create-keys` followed by `selfupdatectl print-key`
+	publicKey := ed25519.PublicKey{155, 222, 199, 199, 191, 40, 90, 139, 24, 97, 173, 39, 80, 212, 82, 40, 163, 36, 175, 68, 45, 86, 199, 97, 67, 228, 165, 31, 134, 34, 164, 6}
+
+	// The public key above match the signature of the below file served by our CDN
+
+	httpSource := selfupdate.NewHTTPSource(nil, host)
+
+	config := &selfupdate.Config{
+		Current:   &selfupdate.Version{Number: build.Version},
+		Source:    httpSource,
+		Schedule:  selfupdate.Schedule{FetchOnStart: true, Interval: 60 * time.Second},
+		PublicKey: publicKey,
+
+		ProgressCallback:       func(f float64, err error) { log.Println("Download", f, "%") },
+		RestartConfirmCallback: func() bool { return true },
+		UpgradeConfirmCallback: func(_ string) bool { return true },
+		ExitCallback:           func(_ error) { os.Exit(1) },
+	}
+
+	_, err := selfupdate.Manage(config)
+	if err != nil {
+		log.Println("Error while setting up update manager: ", err)
+		return
+	}
+	log.Println("Successfully updated self-update.")
+}

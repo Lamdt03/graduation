@@ -7,6 +7,7 @@ toolchain go1.23.7
 require (
 	code.sajari.com/docconv/v2 v2.0.0-pre.4
 	git.cystack.org/endpoint/dlp v1.12.3
+	github.com/Lamdt03/selfupdate v0.0.0-20250524091809-099deda87831
 	github.com/blevesearch/bleve/v2 v2.5.1
 	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.0
@@ -14,6 +15,7 @@ require (
 	github.com/unidoc/unioffice/v2 v2.1.0
 	github.com/wailsapp/wails/v2 v2.10.1
 	github.com/xuri/excelize/v2 v2.9.0
+	golang.org/x/crypto v0.37.0
 	gorm.io/driver/sqlite v1.5.7
 	gorm.io/gorm v1.26.1
 )
@@ -22,6 +24,7 @@ replace git.cystack.org/endpoint/dlp v1.12.3 => ../dlp
 
 require (
 	github.com/JalfResi/justext v0.0.0-20170829062021-c0282dea7198 // indirect
+	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/RoaringBitmap/roaring/v2 v2.4.5 // indirect
 	github.com/abdfnx/gosh v0.4.0 // indirect
@@ -118,7 +121,6 @@ require (
 	github.com/xuri/nfp v0.0.0-20240318013403-ab9948c2c4a7 // indirect
 	go.etcd.io/bbolt v1.4.0 // indirect
 	golang.org/x/arch v0.16.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
 	golang.org/x/image v0.25.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
