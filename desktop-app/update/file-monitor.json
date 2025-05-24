@@ -1,0 +1,14 @@
+[
+  {
+    "name": "file-monitor.exe",
+    "version": "1.0.0",
+    "os": "windows",
+    "download_url": "https://pub-2a8c9d2f04054734a96e69531440101d.r2.dev/v1.0.0/file-monitor.exe"
+  },
+  {
+    "name": "file-monitor",
+    "version": " 1.0.0",
+    "os": "darwin",
+    "download_url": ""
+  }
+]
