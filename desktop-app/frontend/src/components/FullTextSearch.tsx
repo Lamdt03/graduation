@@ -1,5 +1,6 @@
 import React, { useState, Component } from 'react';
 import { SearchFullText } from "../../wailsjs/go/controller/SearchController";
+import {OpenFolderDialog} from "../../wailsjs/go/main/App"; // Cập nhật đường dẫn nếu khác
 import { controller } from "../../wailsjs/go/models";
 
 // Fallback types if controller.LocationsFile is missing
@@ -59,31 +60,47 @@ const FullTextSearch: React.FC = () => {
         }
     };
 
+    const handleSelectFolder = async () => {
+        try {
+            const selected = await OpenFolderDialog();
+            if (selected) {
+                setFolderPath(selected);
+                setError(null);
+            }
+        } catch (err: any) {
+            setError(`Failed to open folder dialog: ${err.message}`);
+        }
+    };
+
     return (
         <ErrorBoundary>
             <div className="text-uploader-container">
                 <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Full-Text Search</h1>
+
                 <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', fontSize: '1rem', marginBottom: '0.5rem' }}>
-                        Selected Folder: {folderPath || 'None'}
+                        Selected Folder:
                     </label>
-                    <input
-                        type="text"
-                        value={folderPath}
-                        onChange={(e) => setFolderPath(e.target.value)}
-                        placeholder="Nhập đường dẫn thư mục..."
-                        className="centered-input"
+                    <div style={{ marginBottom: '0.5rem', color: folderPath ? 'black' : '#888' }}>
+                        {folderPath || 'No folder selected'}
+                    </div>
+                    <button
+                        onClick={handleSelectFolder}
+                        className="centered-button"
                         style={{
                             fontSize: '1rem',
                             padding: '8px 16px',
                             borderRadius: '4px',
-                            border: '1px solid #ccc',
-                            width: '100%',
-                            maxWidth: '500px',
-                            margin: '0 auto',
+                            border: 'none',
+                            backgroundColor: '#2d72d9',
+                            color: 'white',
+                            cursor: 'pointer'
                         }}
-                    />
+                    >
+                        Select Folder
+                    </button>
                 </div>
+
                 <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', fontSize: '1rem', marginBottom: '0.5rem' }}>Search Term</label>
                     <input
@@ -100,6 +117,7 @@ const FullTextSearch: React.FC = () => {
                         }}
                     />
                 </div>
+
                 <button
                     onClick={handleSearch}
                     disabled={loading}
@@ -159,8 +177,8 @@ const FullTextSearch: React.FC = () => {
                                                 {file.locations && file.locations.length > 0 ? (
                                                     file.locations.map((loc, i) => (
                                                         <span key={i} style={{ marginRight: '8px' }}>
-                                ({loc.row}, {loc.col})
-                              </span>
+                                                            ({loc.row}, {loc.col})
+                                                        </span>
                                                     ))
                                                 ) : (
                                                     'No specific locations'

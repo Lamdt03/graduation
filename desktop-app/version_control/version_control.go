@@ -6,6 +6,7 @@ import (
 	"gorm.io/gorm"
 	"graduation/desktop-app/version_control/service"
 	"os"
+	"path/filepath"
 )
 
 //func main() {
@@ -36,11 +37,10 @@ func Config() (*gorm.DB, error) {
 
 func main() {
 
-	sourceFile := "837c96ed-c928-4e43-8bcb-6f13a1e3087e"
-	backupDir := "/Users/lamdt/GolandProjects/graduation/837c96ed-c928-4e43-8bcb-6f13a1e3087e"
-
 	// List available backup versions
-	versions, err := service.ListBackupVersions(sourceFile, backupDir)
+	backupDir := "C:\\Windows\\System32\\config\\systemprofile\\.filemonitor"
+	fileId := "c6fefb8d-b77d-4ecd-9c0a-176387b4fcd1"
+	versions, err := service.ListBackupVersions(backupDir, fileId)
 	if err != nil {
 		fmt.Printf("Failed to list backup versions: %v\n", err)
 		return
@@ -56,10 +56,20 @@ func main() {
 		fmt.Printf("%d: %s\n", i+1, version)
 	}
 
-	// Example: Restore to the latest version
-	if err := service.RestoreFile(sourceFile, backupDir, versions[1]); err != nil {
-		fmt.Printf("Restore failed: %v\n", err)
+	err = os.MkdirAll(filepath.Join(backupDir, fileId, "restoration"), 0755)
+	if err != nil {
+		fmt.Printf("MkdirAll error: %v", err)
 		return
+	}
+
+	// Example: Restore all version
+
+	for _, version := range versions {
+		dest := filepath.Join(backupDir, fileId, "restoration", fmt.Sprintf("%s.go", version))
+		if err := service.RestoreFile(fileId, version, dest, backupDir); err != nil {
+			fmt.Printf("Restore failed: %v\n", err)
+			return
+		}
 	}
 	fmt.Println("File restored successfully")
 }

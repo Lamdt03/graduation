@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"git.cystack.org/endpoint/dlp/file_monitor"
+	"github.com/rs/zerolog/log"
 	"graduation/desktop-app/version_control/model"
 	"graduation/desktop-app/version_control/repository"
+	"strings"
 
 	"io"
 	"os"
@@ -17,17 +19,19 @@ import (
 type FileService struct {
 	fiRepo      *repository.FileInfoRepository
 	MonitorPath string
+	BackupDir   string
 }
 
-func NewFileService(fiRepo *repository.FileInfoRepository, monitorPath string) *FileService {
+func NewFileService(fiRepo *repository.FileInfoRepository, monitorPath, backupDir string) *FileService {
 	return &FileService{
 		fiRepo:      fiRepo,
 		MonitorPath: monitorPath,
+		BackupDir:   backupDir,
 	}
 }
 
-func (v *FileService) StartMonitor() {
-	fileMonitor, numCon, err := file_monitor.GetMonitor(v.MonitorPath)
+func (f *FileService) StartMonitor() {
+	fileMonitor, numCon, err := file_monitor.GetMonitor(f.MonitorPath)
 	fmt.Print(numCon)
 	if err != nil {
 
@@ -39,74 +43,73 @@ func (v *FileService) StartMonitor() {
 				if filepath.Ext(inf.Path) == "" {
 					continue
 				}
-				fmt.Println(inf.Path)
+				log.Info().Msgf("new event: %s", inf.Path)
 				switch inf.Transition {
 				case "CREATE":
 					{
-						err = v.HandleCreateAction(inf.Path)
+						err = f.HandleCreateAction(inf.Path)
 						if err != nil {
 							fmt.Print(err)
 						}
 						if inf.Size != 0 {
-							err = v.HandleWriteAction(inf.Path)
+							err = f.HandleWriteAction(inf.Path)
 						}
 
 					}
 				case "RENAME":
 					{
-						err = v.HandleMoveAction(inf.OldPath, inf.Path)
+						err = f.HandleMoveAction(inf.OldPath, inf.Path)
 
 					}
 				case "MOVE":
 					{
-						err = v.HandleMoveAction(inf.OldPath, inf.Path)
+						err = f.HandleMoveAction(inf.OldPath, inf.Path)
 
 					}
 
 				case "DELETE":
 					{
-						err = v.HandleDeleteAction(inf.Path)
+						err = f.HandleDeleteAction(inf.Path)
 					}
 				case "WRITE":
 					{
-						err = v.HandleWriteAction(inf.Path)
+						err = f.HandleWriteAction(inf.Path)
 					}
 				}
 				if err != nil {
-					fmt.Println(err)
+					log.Err(err).Msg("action file failed")
 				}
-
+			case err = <-fileMonitor.ErrChan:
+				{
+					log.Err(err).Msg("monitor failed")
+				}
 			}
 
 		}
 	}()
 	fileMonitor.StartMonitor()
 
-	for {
-		e := <-fileMonitor.ErrChan
-		fmt.Print(e)
-	}
 }
 
-func (v *FileService) HandleMoveAction(oldPath string, newPath string) error {
-	err := v.fiRepo.UpdateFileInfo(oldPath, newPath)
+func (f *FileService) HandleMoveAction(oldPath string, newPath string) error {
+	err := f.fiRepo.UpdateFileInfo(oldPath, newPath)
 	if err != nil {
 		return fmt.Errorf("UpdateFileInfo error: %v", err)
 	}
 	return nil
 }
 
-func (v *FileService) HandleCreateAction(filepath string) error {
+func (f *FileService) HandleCreateAction(filepath string) error {
 	fi := model.NewFileInfo(filepath)
-	err := v.fiRepo.CreateFileInfo(fi)
+	err := f.fiRepo.CreateFileInfo(fi)
 	if err != nil {
 		return fmt.Errorf("CreateFileInfo error: %v", err)
 	}
 	return nil
 }
 
-func (v *FileService) HandleDeleteAction(filepath string) error {
-	err := v.fiRepo.DeleteFileInfo(filepath)
+func (f *FileService) HandleDeleteAction(filepath string) error {
+	err := f.fiRepo.DeleteFileInfo(filepath)
 	if err != nil {
 		return fmt.Errorf("DeleteFileInfo error: %v", err)
 	}
@@ -114,36 +117,74 @@ func (v *FileService) HandleDeleteAction(filepath string) error {
 	return nil
 }
 
-func (v *FileService) HandleWriteAction(sourceFile string) error {
-	fi, err := v.fiRepo.GetFileInfo(sourceFile)
+func (f *FileService) HandleWriteAction(sourceFile string) error {
+	fi, err := f.fiRepo.GetFileInfo(sourceFile)
 	if err != nil {
 		return fmt.Errorf("GetFileInfo error: %v", err)
 	}
-	if err := backupFile(sourceFile, fi.ID); err != nil {
+	dirPath := filepath.Join(f.BackupDir, fi.ID)
+	if err := backupFile(sourceFile, dirPath); err != nil {
 		fmt.Printf("Backup failed: %v\n", err)
 		return err
 	}
 	return nil
 }
 
-func (v *FileService) ListVersion(filepath string) ([]string, error) {
-	fi, err := v.fiRepo.GetFileInfo(filepath)
+func (f *FileService) ListVersion(path string) ([]string, error) {
+	fi, err := f.fiRepo.GetFileInfo(path)
 	if err != nil {
 		return nil, fmt.Errorf("GetFileInfo error: %v", err)
 	}
-	versions, err := ListBackupVersions(filepath, fi.ID)
+	versions, err := ListBackupVersions(f.BackupDir, fi.ID)
 	if err != nil {
 		return nil, fmt.Errorf(fmt.Sprintf("Failed to list backup versions: %v", err))
 	}
 	return versions, nil
 }
 
-func (v *FileService) RestoreVersion(filePath, timestamp, version string) error {
-	fi, err := v.fiRepo.GetFileInfo(filePath)
+func (f *FileService) RestoreAll(path string) (string, error) {
+	fi, err := f.fiRepo.GetFileInfo(path)
+	if err != nil {
+		return "", fmt.Errorf("GetFileInfo error: %v", err)
+	}
+	versions, err := ListBackupVersions(f.BackupDir, fi.ID)
+	if err != nil {
+		return "", fmt.Errorf("Failed to list backup versions: %v", err)
+	}
+	if len(versions) == 0 {
+		return "", fmt.Errorf("no backup versions found")
+	}
+
+	fmt.Println("Available backup versions:")
+	for i, version := range versions {
+		log.Info().Msgf("%d: %s\n", i+1, version)
+	}
+	restoreDir := filepath.Join(f.BackupDir, fi.ID, "restoration")
+	err = os.MkdirAll(restoreDir, 0755)
+	if err != nil {
+		return "", fmt.Errorf("MkdirAll error: %v", err)
+	}
+	for _, version := range versions {
+		dest := filepath.Join(f.BackupDir, fi.ID, "restoration", fmt.Sprintf("%s.%s", version, filepath.Ext(path)))
+		if err := RestoreFile(fi.ID, version, dest, f.BackupDir); err != nil {
+			return "", fmt.Errorf("Restore failed: %v\n", err)
+		}
+	}
+	return restoreDir, nil
+}
+
+func (f *FileService) RestoreVersion(filePath, timestamp string) error {
+	fi, err := f.fiRepo.GetFileInfo(filePath)
 	if err != nil {
 		return fmt.Errorf("GetFileInfo error: %v", err)
 	}
-	err = RestoreFile(fi.ID, timestamp, version)
+	err = os.MkdirAll(filepath.Join(f.BackupDir, fi.ID, "restoration"), 0755)
+	if err != nil {
+		return fmt.Errorf("MkdirAll error: %v", err)
+	}
+
+	dest := filepath.Join(f.BackupDir, fi.ID, "restoration", fmt.Sprintf("%s%s", timestamp, filepath.Ext(filePath)))
+	err = RestoreFile(fi.ID, timestamp, dest, f.BackupDir)
 	if err != nil {
 		return fmt.Errorf("RestoreFile error: %v", err)
 	}
@@ -178,7 +219,7 @@ func backupFile(sourcePath, backupDir string) error {
 
 	// Generate backup filename with timestamp
 	timestamp := time.Now().Format("20060102_150405")
-	backupFilename := fmt.Sprintf("%s_%s.json", backupDir, timestamp)
+	backupFilename := fmt.Sprintf("%s.json", timestamp)
 	backupPath := filepath.Join(backupDir, backupFilename)
 
 	// Get previous backup for differential comparison
@@ -296,10 +337,10 @@ func shouldBackupBlock(previousBlocks []Block, offset int, currentContent []byte
 }
 
 // RestoreFile restores a file to a specific backup version identified by timestamp
-func RestoreFile(fileId, timestamp, dest string) error {
+func RestoreFile(fileId, timestamp, dest, backupDir string) error {
 	// Construct the backup file path
-	backupFilename := fmt.Sprintf("%s_%s.json", filepath.Base(fileId), timestamp)
-	backupPath := filepath.Join(fileId, backupFilename)
+	backupFilename := fmt.Sprintf("%s.json", timestamp)
+	backupPath := filepath.Join(backupDir, fileId, backupFilename)
 
 	// Open the backup file
 	backupFile, err := os.Open(backupPath)
@@ -343,10 +384,11 @@ func RestoreFile(fileId, timestamp, dest string) error {
 }
 
 // ListBackupVersions returns a sorted list of available backup timestamps for a file
-func ListBackupVersions(sourcePath, backupDir string) ([]string, error) {
+func ListBackupVersions(backupDir, fileId string) ([]string, error) {
+	dir := filepath.Join(backupDir, fileId)
 	var timestamps []string
-	pattern := fmt.Sprintf("%s_*.json", filepath.Base(sourcePath))
-	matches, err := filepath.Glob(filepath.Join(backupDir, pattern))
+	pattern := fmt.Sprintf("*.json")
+	matches, err := filepath.Glob(filepath.Join(dir, pattern))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list backup files: %v", err)
 	}
@@ -354,7 +396,7 @@ func ListBackupVersions(sourcePath, backupDir string) ([]string, error) {
 	for _, match := range matches {
 		filename := filepath.Base(match)
 		// Extract timestamp from filename
-		timeStr := filename[len(filepath.Base(sourcePath))+1 : len(filename)-5]
+		timeStr := strings.TrimSuffix(filename, ".json")
 		if _, err := time.Parse("20060102_150405", timeStr); err == nil {
 			timestamps = append(timestamps, timeStr)
 		}

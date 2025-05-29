@@ -6,6 +6,8 @@ import ExcelPage from './pages/ExcelPage';
 import TextFolderPage from './pages/TextFolderPage';
 import ExcelFolderPage from "./pages/ExcelFolderPage";
 import FullTextSearchPage from "./pages/FullTextSearchPage";
+import FolderMonitorPage from "./pages/FolderMonitorPage";
+import FileVersionsSearchPage from "./pages/FileVersionsSearchPage";
 
 const App: React.FC = () => {
     return (
@@ -19,6 +21,8 @@ const App: React.FC = () => {
                         <Route path="/text-folder" element={<TextFolderPage/>}/>
                         <Route path="/excel-folder" element={<ExcelFolderPage/>}/>
                         <Route path="/full-text-search" element={<FullTextSearchPage/>}/>
+                        <Route path="/file-monitor" element={<FolderMonitorPage/>}/>
+                        <Route path="/file-versions-search" element={<FileVersionsSearchPage/>}/>
                     </Routes>
                 </div>
             </div>

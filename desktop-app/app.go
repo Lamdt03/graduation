@@ -3,6 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"golang.org/x/sys/windows"
+	"os"
+	"os/exec"
+	"unsafe"
 )
 
 // App struct
@@ -19,6 +24,62 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+}
+
+var ErrNotElevated = fmt.Errorf("not running as administrator")
+
+type TokenElevation struct {
+	TokenIsElevated uint32
+}
+
+func isElevated() bool {
+	var token windows.Token
+	// Lấy token của tiến trình hiện tại
+	err := windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_QUERY, &token)
+	if err != nil {
+		return false
+	}
+	defer token.Close()
+
+	var elevation TokenElevation
+	var outLen uint32
+
+	// Lấy thông tin TokenElevation
+	err = windows.GetTokenInformation(
+		token,
+		windows.TokenElevation,
+		(*byte)(unsafe.Pointer(&elevation)),
+		uint32(unsafe.Sizeof(elevation)),
+		&outLen,
+	)
+	if err != nil {
+		return false
+	}
+
+	return elevation.TokenIsElevated != 0
+}
+
+func (a *App) InstallService(path string) error {
+	if !isElevated() {
+		return ErrNotElevated
+	}
+
+	binaryPath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("could not get executable path: %w", err)
+	}
+	cmd := exec.Command(binaryPath, "install", "--path", path)
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("could not install service: %w", err)
+	}
+	return nil
+}
+
+func (a *App) OpenFolderDialog() (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Chọn thư mục cần theo dõi",
+	})
 }
 
 // Greet returns a greeting for the given name
