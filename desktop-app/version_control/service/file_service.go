@@ -1,6 +1,7 @@
 package service
 
 import (
+	"code.sajari.com/docconv/v2"
 	"encoding/json"
 	"fmt"
 	"git.cystack.org/endpoint/dlp/file_monitor"
@@ -37,6 +38,12 @@ func (f *FileService) StartMonitor() {
 
 	}
 	go func() {
+		valiExcelExt := map[string]bool{
+			".csv":  true,
+			".xlsx": true,
+			".xls":  true,
+		}
+
 		for {
 			select {
 			case inf := <-fileMonitor.InfoChan:
@@ -44,6 +51,15 @@ func (f *FileService) StartMonitor() {
 					continue
 				}
 				log.Info().Msgf("new event: %s", inf.Path)
+				if !valiExcelExt[filepath.Ext(inf.Path)] {
+					if strings.HasPrefix(filepath.Base(inf.Path), "~") || strings.HasPrefix(filepath.Base(inf.Path), "$") {
+						continue
+					}
+					mimeType := docconv.MimeTypeByExtension(filepath.Base(inf.Path))
+					if mimeType == "application/octet-stream" {
+						continue
+					}
+				}
 				switch inf.Transition {
 				case "CREATE":
 					{

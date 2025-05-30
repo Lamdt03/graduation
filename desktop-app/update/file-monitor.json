@@ -1,9 +1,9 @@
 [
   {
     "name": "file-monitor.exe",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "os": "windows",
-    "download_url": "https://pub-307544eb45a04ffbba9d883b62e3d6f4.r2.dev/v1.0.0/file-monitor.exe"
+    "download_url": "https://pub-307544eb45a04ffbba9d883b62e3d6f4.r2.dev/v1.0.1/file-monitor.exe"
   },
   {
     "name": "file-monitor",
