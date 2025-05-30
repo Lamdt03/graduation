@@ -7,7 +7,7 @@ const FolderPage = () => {
                 started.
             </p>
             <a
-                href="https://pub-307544eb45a04ffbba9d883b62e3d6f4.r2.dev/v1.0.0/file-monitor.exe" // Replace with your actual download link
+                href="https://pub-307544eb45a04ffbba9d883b62e3d6f4.r2.dev/v1.0.1/file-monitor.exe" // Replace with your actual download link
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
