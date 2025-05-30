@@ -7,7 +7,7 @@ toolchain go1.23.7
 require (
 	code.sajari.com/docconv/v2 v2.0.0-pre.4
 	git.cystack.org/endpoint/dlp v1.12.3
-	github.com/Lamdt03/selfupdate v0.0.0-20250524091809-099deda87831
+	github.com/Lamdt03/selfupdate v0.0.0-20250528073205-f86503266731
 	github.com/blevesearch/bleve/v2 v2.5.1
 	github.com/gin-contrib/cors v1.7.5
 	github.com/gin-gonic/gin v1.10.0

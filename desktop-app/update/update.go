@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const host = "https://pub-2a8c9d2f04054734a96e69531440101d.r2.dev/file-monitor.json"
+const host = "https://pub-307544eb45a04ffbba9d883b62e3d6f4.r2.dev/file-monitor.json"
 
 func AutoUpdate() {
 	// Used `selfupdatectl create-keys` followed by `selfupdatectl print-key`

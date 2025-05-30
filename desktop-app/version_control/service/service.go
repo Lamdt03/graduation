@@ -1,6 +1,7 @@
 package service
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/windows/svc"
@@ -66,6 +67,7 @@ func (f *FileMonitorService) run() {
 
 	//open port to restore file
 	router := gin.Default()
+	router.Use(cors.Default())
 	router.GET("/file/versions", func(ctx *gin.Context) {
 		path := ctx.Query("filepath")
 		target := ctx.Query("target")
@@ -83,7 +85,7 @@ func (f *FileMonitorService) run() {
 		ctx.JSON(http.StatusOK, locations)
 	})
 	go func() {
-		err := router.Run(":9999")
+		err := router.Run("127.0.0.1:9999")
 		if err != nil {
 			log.Err(err).Msgf("could not start service")
 		}

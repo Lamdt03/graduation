@@ -10,6 +10,10 @@ export function InstallService(arg1) {
   return window['go']['main']['App']['InstallService'](arg1);
 }
 
+export function OpenFileDialog() {
+  return window['go']['main']['App']['OpenFileDialog']();
+}
+
 export function OpenFolderDialog() {
   return window['go']['main']['App']['OpenFolderDialog']();
 }

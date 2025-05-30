@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"graduation/desktop-app/version_control/common"
 	"log"
@@ -10,6 +11,8 @@ import (
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/mgr"
 )
+
+var ServiceExistErr = errors.New("service already exists")
 
 func RunService(isDebug bool, handler svc.Handler) error {
 	if !isDebug {
@@ -82,8 +85,7 @@ func StartService() error {
 	return s.Start()
 }
 
-func InstallService(monitorPath string) error {
-	execPath := "C:\\Users\\lamdt\\GolandProjects\\graduation\\desktop-app\\build\\bin\\file-monitor.exe" // Replace with the actual path to your executable
+func InstallService(execPath, monitorPath string) error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to service manager: %w", err)
@@ -93,7 +95,7 @@ func InstallService(monitorPath string) error {
 	s, err := m.OpenService(common.SERVICE_NAME)
 	if err == nil {
 		s.Close()
-		return fmt.Errorf("service %s already exists", common.SERVICE_NAME)
+		return ServiceExistErr
 	}
 
 	binaryPath := fmt.Sprintf("\"%s\" service --path \"%s\"", execPath, monitorPath)
@@ -102,7 +104,6 @@ func InstallService(monitorPath string) error {
 		DisplayName: common.SERVICE_NAME,
 		StartType:   mgr.StartAutomatic,
 	})
-
 	if err != nil {
 		return fmt.Errorf("could not create service: %w", err)
 	}

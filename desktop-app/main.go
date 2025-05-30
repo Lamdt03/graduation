@@ -2,6 +2,7 @@ package main
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -12,6 +13,7 @@ import (
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"graduation/desktop-app/build"
 	"graduation/desktop-app/controller"
 	"graduation/desktop-app/update"
 	"graduation/desktop-app/version_control/common"
@@ -48,9 +50,18 @@ func main() {
 		))
 	}
 	app := &cli.App{
-		Name:  "desktop-app",
+		Name:  "file monitor",
 		Usage: "A desktop application with file monitoring service",
 		Commands: []*cli.Command{
+			{
+				Name:  "version",
+				Usage: "Get file monitor version",
+				Flags: []cli.Flag{},
+				Action: func(c *cli.Context) error {
+					fmt.Println("File-monitor", build.Version)
+					return nil
+				},
+			},
 			{
 				Name:  "gui",
 				Usage: "Run the GUI application",
@@ -85,16 +96,29 @@ func main() {
 					&cli.StringFlag{
 						Name:    "path",
 						Usage:   "Path to monitor for file changes",
-						Value:   "C:\\path\\to\\monitor", // Replace with your default path
+						Value:   "C:\\path\\to\\monitor",
 						Aliases: []string{"p"},
 					},
 				},
 				Action: func(c *cli.Context) error {
-					err := service.InstallService(c.String("path"))
-					if err != nil {
-						return err
-					}
+
 					binaryPath, err := os.Executable()
+					if err != nil {
+						return fmt.Errorf("failed to get executable path: %v", err)
+					}
+					err = service.InstallService(binaryPath, c.String("path"))
+					if err != nil {
+						if !errors.Is(err, service.ServiceExistErr) {
+							return fmt.Errorf("failed to install service: %v", err)
+						} else {
+							startCmd := exec.Command("sc", "stop", common.SERVICE_NAME)
+							startOutput, err := startCmd.CombinedOutput()
+							if err != nil {
+								log.Error().Err(err).Msgf("start service fail %s", string(startOutput))
+								return err
+							}
+						}
+					}
 					binPath := fmt.Sprintf("\"%s\" service --path \"%s\"", binaryPath, c.String("path"))
 
 					configCmd := exec.Command("sc", "config", common.SERVICE_NAME, fmt.Sprintf(`binPath=%s`, binPath))
@@ -108,10 +132,10 @@ func main() {
 					startCmd := exec.Command("sc", "start", common.SERVICE_NAME)
 					startOutput, err := startCmd.CombinedOutput()
 					if err != nil {
-						log.Error().Err(err).Msgf("start service fail %s", string(startOutput))
+						log.Error().Err(err).Msgf("stop service fail %s", string(startOutput))
 						return err
 					}
-					log.Info().Msgf("start service success %s", string(startOutput))
+					log.Info().Msgf("stop service success %s", string(startOutput))
 					return nil
 				},
 			},

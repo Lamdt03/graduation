@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"bufio"
 	"code.sajari.com/docconv/v2"
 	"fmt"
 	"github.com/blevesearch/bleve/v2"
@@ -32,7 +31,11 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 	if err != nil {
 		return nil, fmt.Errorf("remove folder failed: %v", err)
 	}
-
+	valiExcelExt := map[string]bool{
+		".csv":  true,
+		".xlsx": true,
+		".xls":  true,
+	}
 	mapping := bleve.NewIndexMapping()
 	index, err := bleve.New(indexPath, mapping)
 	defer index.Close()
@@ -45,20 +48,19 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 			return err
 		}
 
-		// Skip hidden or ignored directories
-		skipDirs := map[string]bool{
-			".git":         true,
-			"node_modules": true,
-			"venv":         true,
-			".idea":        true,
-		}
-
 		if d.IsDir() {
 			base := filepath.Base(path)
-			if skipDirs[base] {
+			if strings.HasPrefix(base, ".") {
 				return filepath.SkipDir
 			}
 			return nil
+		}
+
+		if !valiExcelExt[filepath.Ext(path)] {
+			mimeType := docconv.MimeTypeByExtension(filepath.Base(path))
+			if mimeType == "application/octet-stream" {
+				return nil
+			}
 		}
 
 		// Only process files
@@ -78,8 +80,8 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 	}
 
 	// Search
-	query := bleve.NewMatchQuery(searchTerm)
-	search := bleve.NewSearchRequest(query)
+	query := bleve.NewQueryStringQuery(fmt.Sprintf("*%s*", searchTerm))
+	search := bleve.NewSearchRequestOptions(query, 1000, 0, false)
 	result, err := index.Search(search)
 
 	if err != nil {
@@ -91,80 +93,33 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 		fmt.Printf("File: %s\n", hit.ID)
 		var locationsFile LocationsFile
 		locationsFile.Filename = hit.ID
-		locations := getLineMatches(hit.ID, searchTerm)
-		locationsFile.Locations = append(locationsFile.Locations, locations...)
 		locationFiles = append(locationFiles, locationsFile)
 	}
 	return locationFiles, nil
 }
 
-func getLineMatches(path, term string) []Location {
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".xlsx":
-		return getExcelMatches(path, term)
-	case ".docx":
-		return getDocxMatches(path, term)
-	}
-
-	// Handle other file types (e.g., text)
-	file, err := os.Open(path)
-	if err != nil {
-		fmt.Printf("  Failed to open file: %v\n", err)
-		return nil
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	lineNum := 1
-	var locations []Location
-	for scanner.Scan() {
-		line := scanner.Text()
-		searchLine := line
-		offset := 0
-		for {
-			index := strings.Index(searchLine, term)
-			if index == -1 {
-				break
-			}
-			locations = append(locations, Location{
-				Row: lineNum,
-				Col: offset + index + 1,
-			})
-			fmt.Printf("  Line %d, Column %d\n", lineNum, offset+index+1)
-			// Move forward in the line
-			searchLine = searchLine[index+len(term):]
-			offset += index + len(term)
-		}
-		lineNum++
-	}
-	return locations
-}
-
-// extractContent extracts text content for indexing
 func extractContent(path string) (string, error) {
+
 	ext := strings.ToLower(filepath.Ext(path))
 	switch ext {
-	case ".docx":
-		res, err := docconv.ConvertPath(path)
-		if err != nil {
-			return "", err
-		}
-		return res.Body, nil
-
-	case ".xlsx":
+	case ".xlsx", ".csv", ".xls":
 		f, err := excelize.OpenFile(path)
 		if err != nil {
 			return "", err
 		}
 		defer f.Close()
 		var sb strings.Builder
+		const maxRows = 500
+
 		for _, sheet := range f.GetSheetList() {
 			rows, err := f.GetRows(sheet)
 			if err != nil {
 				continue
 			}
-			for _, row := range rows {
+			for i, row := range rows {
+				if i >= maxRows {
+					break
+				}
 				for _, cell := range row {
 					sb.WriteString(cell)
 					sb.WriteString(" ")
@@ -172,56 +127,21 @@ func extractContent(path string) (string, error) {
 				sb.WriteString("\n")
 			}
 		}
-		return sb.String(), nil
+		text := sb.String()
+		if len(text) > 100_000 {
+			text = text[:100_000]
+		}
+		return text, nil
 
 	default:
-		// Default for normal text/code files
-		data, err := os.ReadFile(path)
-		return string(data), err
-	}
-}
-
-func getExcelMatches(path, term string) []Location {
-	f, err := excelize.OpenFile(path)
-	if err != nil {
-		fmt.Printf("  Failed to open Excel file: %v\n", err)
-		return nil
-	}
-	defer f.Close()
-
-	var locations []Location
-	for _, sheet := range f.GetSheetList() {
-		rows, err := f.GetRows(sheet)
+		res, err := docconv.ConvertPath(path)
 		if err != nil {
-			continue
+			return "", err
 		}
-		for rowIdx, row := range rows {
-			for colIdx, cell := range row {
-				if strings.Contains(strings.ToLower(cell), strings.ToLower(term)) {
-					// Excel rows and columns are 1-based for user output
-					locations = append(locations, Location{
-						Row: rowIdx + 1,
-						Col: colIdx + 1,
-					})
-				}
-			}
+		text := res.Body
+		if len(text) > 100_000 {
+			text = text[:100_000]
 		}
+		return text, nil
 	}
-	return locations
-}
-
-func getDocxMatches(path, term string) []Location {
-
-	// Extract text using docconv
-	res, err := docconv.ConvertPath(path)
-	if err != nil {
-		fmt.Printf("  Failed to convert .docx file: %v\n", err)
-		return nil
-	}
-
-	// Check if term exists (case-insensitive)
-	if strings.Contains(strings.ToLower(res.Body), strings.ToLower(term)) {
-		return []Location{{Row: 0, Col: 0}} // Indicate term found, no specific location
-	}
-	return nil
 }

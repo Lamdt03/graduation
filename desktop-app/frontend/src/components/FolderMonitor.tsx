@@ -14,29 +14,29 @@ const FolderMonitor: React.FC = () => {
                 setErrorMsg("");
             }
         } catch (error) {
-            console.error("Lỗi khi chọn thư mục:", error);
-            alert("Không thể chọn thư mục.");
+            console.error("select folder error:", error);
+            alert("Cannot select folder.");
         }
     };
 
     const handleMonitor = async () => {
         if (!folderPath) {
-            setErrorMsg("Vui lòng chọn thư mục trước.");
+            setErrorMsg("Please specify a folder.");
             return;
         }
 
         setLoading(true);
         try {
             await InstallService(folderPath);
-            alert("Cài đặt service thành công.");
+            alert("Install service success.");
         } catch (error: any) {
             console.error("InstallService error:", error);
 
             if (error.message?.includes("not running as administrator")) {
-                alert("Bạn cần chạy ứng dụng bằng quyền Administrator.\n" +
-                    "Chuột phải vào app và chọn 'Run as administrator'.");
+                alert("You need to start the app with Administrator privileges.\n" +
+                    "right click to the app and choose 'Run as administrator'.");
             } else {
-                alert("Cài đặt service thất bại: " + error.message);
+                alert("Install service fail: " + error.message);
             }
         } finally {
             setLoading(false);
@@ -45,13 +45,35 @@ const FolderMonitor: React.FC = () => {
 
     return (
         <div className="folder-upload-page">
+            <div style={{
+                padding: '20px 0',
+                textAlign: 'center',
+                backgroundColor: '#fff',
+                borderBottom: '1px solid #e0e0e0'
+            }}>
+                <h1 style={{
+                    margin: 0,
+                    fontSize: '24px',
+                    fontWeight: '600',
+                    color: '#333'
+                }}>
+                   Folder monitor tool
+                </h1>
+                <p style={{
+                    margin: '8px 0 0',
+                    color: '#666',
+                    fontSize: '14px'
+                }}>
+                   monitor folder to trace it change when it is moved, change, edit, remove
+                </p>
+            </div>
             <div className="centered-button" style={{ flexDirection: "column", gap: "1.5rem" }}>
                 <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                     <input
                         type="text"
                         value={folderPath}
                         readOnly
-                        placeholder="Chưa chọn thư mục..."
+                        placeholder="selected folder"
                         style={{
                             padding: "10px",
                             width: "400px",
@@ -66,7 +88,7 @@ const FolderMonitor: React.FC = () => {
                 </div>
 
                 <button onClick={handleMonitor} disabled={loading}>
-                    {loading ? "Đang xử lý..." : "Monitor"}
+                    {loading ? "processing..." : "Monitor"}
                 </button>
 
                 {errorMsg && (
@@ -74,7 +96,7 @@ const FolderMonitor: React.FC = () => {
                 )}
 
                 <p className="text-sm text-gray-500 mt-2" style={{ textAlign: "center", color: "#666" }}>
-                    Nếu cài đặt thất bại, hãy đảm bảo bạn đang chạy ứng dụng với quyền <strong>Administrator</strong>.
+                    To monitor the folder, start up with <strong>Administrator</strong> privileges.
                 </p>
             </div>
         </div>

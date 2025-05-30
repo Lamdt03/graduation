@@ -1,9 +1,8 @@
 import React, { useState, Component } from 'react';
 import { SearchFullText } from "../../wailsjs/go/controller/SearchController";
-import {OpenFolderDialog} from "../../wailsjs/go/main/App"; // Cập nhật đường dẫn nếu khác
+import { OpenFolderDialog } from "../../wailsjs/go/main/App";
 import { controller } from "../../wailsjs/go/models";
 
-// Fallback types if controller.LocationsFile is missing
 interface Location {
     col: number;
     row: number;
@@ -14,7 +13,6 @@ interface LocationsFile {
     filename: string;
 }
 
-// Error boundary to catch rendering errors
 class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError: boolean }> {
     constructor(props: { children: React.ReactNode }) {
         super(props);
@@ -27,7 +25,7 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 
     render() {
         if (this.state.hasError) {
-            return <div style={{ color: '#d32f2f', padding: '1rem' }}>Something went wrong. Please try again.</div>;
+            return <div className="error-message-box">Something went wrong. Please try again.</div>;
         }
         return this.props.children;
     }
@@ -74,128 +72,120 @@ const FullTextSearch: React.FC = () => {
 
     return (
         <ErrorBoundary>
-            <div className="text-uploader-container">
-                <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Full-Text Search</h1>
-
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontSize: '1rem', marginBottom: '0.5rem' }}>
-                        Selected Folder:
-                    </label>
-                    <div style={{ marginBottom: '0.5rem', color: folderPath ? 'black' : '#888' }}>
-                        {folderPath || 'No folder selected'}
-                    </div>
-                    <button
-                        onClick={handleSelectFolder}
-                        className="centered-button"
-                        style={{
-                            fontSize: '1rem',
-                            padding: '8px 16px',
-                            borderRadius: '4px',
-                            border: 'none',
-                            backgroundColor: '#2d72d9',
-                            color: 'white',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Select Folder
-                    </button>
+            <div className="folder-upload-page">
+                <div style={{
+                    padding: '20px 0',
+                    textAlign: 'center',
+                    backgroundColor: '#fff',
+                    borderBottom: '1px solid #e0e0e0'
+                }}>
+                    <h1 style={{
+                        margin: 0,
+                        fontSize: '24px',
+                        fontWeight: '600',
+                        color: '#333'
+                    }}>
+                        Full-Text Search Tool
+                    </h1>
+                    <p style={{
+                        margin: '8px 0 0',
+                        color: '#666',
+                        fontSize: '14px'
+                    }}>
+                        Search for keywords within files in a selected folder
+                    </p>
                 </div>
-
-                <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontSize: '1rem', marginBottom: '0.5rem' }}>Search Term</label>
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Enter search term"
-                        style={{
-                            width: '100%',
-                            padding: '8px',
-                            fontSize: '1rem',
-                            border: '1px solid #ccc',
-                            borderRadius: '4px',
-                        }}
-                    />
-                </div>
-
-                <button
-                    onClick={handleSearch}
-                    disabled={loading}
-                    className="centered-button"
-                    style={{
-                        fontSize: '1rem',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
-                        border: 'none',
-                        backgroundColor: loading ? '#ccc' : '#2d72d9',
-                        color: 'white',
-                        cursor: loading ? 'not-allowed' : 'pointer',
-                        width: '100%',
-                    }}
-                >
-                    {loading ? 'Searching...' : 'Search'}
-                </button>
-
-                {error && (
-                    <div
-                        style={{
-                            marginTop: '1rem',
-                            padding: '8px',
-                            backgroundColor: '#ffd6d6',
-                            color: '#d32f2f',
-                            borderRadius: '4px',
-                        }}
-                    >
-                        {error}
+                <div className="search-container">
+                    <div className="file-header">
+                        <div>
+                            <div className="file-name">Search Configuration</div>
+                            <div className="file-stats">
+                                Selected Folder: {folderPath || 'None'}
+                            </div>
+                        </div>
+                        {results.length > 0 && (
+                            <span className="diff-badge">
+                                {results.length} matches
+                            </span>
+                        )}
                     </div>
-                )}
-
-                <div style={{ marginTop: '1.5rem' }}>
-                    {results.length === 0 && !loading && !error && (
-                        <div style={{ fontSize: '1rem', color: '#666' }}>
-                            No results found. Try a different search term or folder.
+                    <div style={{ marginBottom: '16px' }}>
+                        <label className="upload-button" aria-label="Select folder to search">
+                            Select Folder
+                            <input
+                                type="button"
+                                className="file-input"
+                                onClick={handleSelectFolder}
+                                style={{ display: 'none' }}
+                            />
+                        </label>
+                    </div>
+                    <div style={{ marginBottom: '16px' }}>
+                        <label htmlFor="search-input" className="file-name">
+                            Search Term
+                        </label>
+                        <input
+                            id="search-input"
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Enter search term"
+                            className="search-input"
+                            aria-label="Enter search term"
+                        />
+                    </div>
+                    <div className="compare-section">
+                        <button
+                            className="compare-button"
+                            onClick={handleSearch}
+                            disabled={loading}
+                            aria-label={loading ? 'Searching' : 'Start search'}
+                        >
+                            {loading ? 'Searching...' : 'Search'}
+                        </button>
+                    </div>
+                    {error && (
+                        <div className="error-message-box">
+                            {error}
                         </div>
                     )}
-                    {results.length > 0 && (
-                        <>
-                            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-                                Search Results ({results.length})
-                            </h2>
-                            <div className="table-container">
-                                <table className="excel-table">
-                                    <thead>
-                                    <tr>
-                                        <th>Filename</th>
-                                        <th>Matches (Row, Col)</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {results.slice(0, 100).map((file, index) => (
-                                        <tr key={index}>
-                                            <td>{file.filename || 'Unknown'}</td>
-                                            <td>
-                                                {file.locations && file.locations.length > 0 ? (
-                                                    file.locations.map((loc, i) => (
-                                                        <span key={i} style={{ marginRight: '8px' }}>
-                                                            ({loc.row}, {loc.col})
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    'No specific locations'
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            {results.length > 100 && (
-                                <div style={{ fontSize: '1rem', color: '#666', marginTop: '1rem' }}>
-                                    Showing first 100 results. {results.length - 100} more results not displayed.
+                    <div className="result-container">
+                        {results.length === 0 && !loading && !error && (
+                            <p className="file-stats">
+                                No results found. Try a different search term or folder.
+                            </p>
+                        )}
+                        {results.length > 0 && (
+                            <>
+                                <div className="file-header">
+                                    <div className="file-name">
+                                        Search Results ({results.length})
+                                    </div>
                                 </div>
-                            )}
-                        </>
-                    )}
+                                <div className="table-container">
+                                    <table className="excel-table">
+                                        <thead>
+                                        <tr>
+                                            <th>Filename</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        {results.slice(0, 100).map((file, index) => (
+                                            <tr key={index}>
+                                                <td>{file.filename || 'Unknown'}</td>
+                                            </tr>
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {results.length > 100 && (
+                                    <p className="file-stats">
+                                        Showing first 100 results. {results.length - 100} more results not displayed.
+                                    </p>
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
         </ErrorBoundary>

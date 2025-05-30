@@ -78,7 +78,13 @@ func (a *App) InstallService(path string) error {
 
 func (a *App) OpenFolderDialog() (string, error) {
 	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Chọn thư mục cần theo dõi",
+		Title: "Select Folder to open",
+	})
+}
+
+func (a *App) OpenFileDialog() (string, error) {
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select File to open",
 	})
 }
 

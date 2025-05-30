@@ -2,8 +2,8 @@ code.sajari.com/docconv/v2 v2.0.0-pre.4 h1:1yQrSTah9rMSC/s1T9bq2H2j1NuRTppeApqZf
 code.sajari.com/docconv/v2 v2.0.0-pre.4/go.mod h1:+pfeEYCOA46E5fq44sh1OKEkO9hsptg8XRioeP1vvPg=
 github.com/JalfResi/justext v0.0.0-20170829062021-c0282dea7198 h1:8P+AjBhGByCuCX2zTkAf6UY+dj0JczX+t6cSdCSyvfw=
 github.com/JalfResi/justext v0.0.0-20170829062021-c0282dea7198/go.mod h1:0SURuH1rsE8aVWvutuMZghRNrNrYEUzibzJfhEYR8L0=
-github.com/Lamdt03/selfupdate v0.0.0-20250524091809-099deda87831 h1:ZeWRUFD2/wqVT/zfFaw55rAdG/k2ZSEkjHgUUQcCSB0=
-github.com/Lamdt03/selfupdate v0.0.0-20250524091809-099deda87831/go.mod h1:vReaWopFtXJ6b5njpzJ8LamG/kxbUqY8jc725ZyJc0w=
+github.com/Lamdt03/selfupdate v0.0.0-20250528073205-f86503266731 h1:EDyaBDGVU2fH5dRPBffke9IPIZGsFThQyx7g6ULsox4=
+github.com/Lamdt03/selfupdate v0.0.0-20250528073205-f86503266731/go.mod h1:vReaWopFtXJ6b5njpzJ8LamG/kxbUqY8jc725ZyJc0w=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/PuerkitoBio/goquery v1.4.1/go.mod h1:T9ezsOHcCrDCgA8aF1Cqr3sSYbO/xgdy8/R/XiIMAhA=

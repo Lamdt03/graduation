@@ -5,4 +5,6 @@ export function Greet(arg1:string):Promise<string>;
 
 export function InstallService(arg1:string):Promise<void>;
 
+export function OpenFileDialog():Promise<string>;
+
 export function OpenFolderDialog():Promise<string>;

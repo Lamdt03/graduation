@@ -5,6 +5,7 @@ import TextPage from './pages/TextPage';
 import ExcelPage from './pages/ExcelPage';
 import FolderPage from './pages/FolderPage';
 import DownloadPage from './pages/DownloadPage';
+import WelcomePage from './pages/WelcomePage';
 
 const App: React.FC = () => {
     return (
@@ -13,6 +14,7 @@ const App: React.FC = () => {
                 <Menu />
                 <div className="content">
                     <Routes>
+                        <Route path="/" element={<WelcomePage/>}/>
                         <Route path="/text" element={<TextPage />} />
                         <Route path="/excel" element={<ExcelPage />} />
                         <Route path="/folder" element={<FolderPage />} />

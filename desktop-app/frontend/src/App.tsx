@@ -8,6 +8,7 @@ import ExcelFolderPage from "./pages/ExcelFolderPage";
 import FullTextSearchPage from "./pages/FullTextSearchPage";
 import FolderMonitorPage from "./pages/FolderMonitorPage";
 import FileVersionsSearchPage from "./pages/FileVersionsSearchPage";
+import WelcomePage from "./pages/WelcomePage";
 
 const App: React.FC = () => {
     return (
@@ -16,6 +17,7 @@ const App: React.FC = () => {
                 <Menu/>
                 <div className="content">
                     <Routes>
+                        <Route path="/" element={<WelcomePage/>}/>
                         <Route path="/text" element={<TextPage/>}/>
                         <Route path="/excel" element={<ExcelPage/>}/>
                         <Route path="/text-folder" element={<TextFolderPage/>}/>
