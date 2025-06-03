@@ -15,7 +15,6 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 	"graduation/desktop-app/build"
 	"graduation/desktop-app/controller"
-	"graduation/desktop-app/update"
 	"graduation/desktop-app/version_control/common"
 	"graduation/desktop-app/version_control/service"
 	"io"
@@ -165,7 +164,7 @@ func main() {
 
 // runGUI starts the Wails GUI application
 func runGUI() error {
-	update.AutoUpdate()
+
 	app := NewApp()
 	fullTextSearchController := &controller.SearchController{}
 

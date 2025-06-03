@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/sys/windows"
+	"graduation/desktop-app/update"
 	"os"
 	"os/exec"
 	"unsafe"
@@ -24,6 +25,7 @@ func NewApp() *App {
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	update.AutoUpdate()
 }
 
 var ErrNotElevated = fmt.Errorf("not running as administrator")

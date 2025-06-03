@@ -1,5 +1,0 @@
-Line three has changed.
-Hello World
-This is a test file.
-Another common line.
-This last line is modified.
