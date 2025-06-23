@@ -1,6 +1,7 @@
 package model
 
 import (
+	"container/list"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -16,6 +17,14 @@ func NewFileInfo(filepath string) *FileInfos {
 		Filepath: filepath,
 	}
 }
+
+type EventLog struct {
+	Path      string `json:"path"`
+	Timestamp string `json:"timestamp"`
+	Event     string `json:"event"`
+}
+
+var BackupLogsList = list.New()
 
 func (v *FileInfos) BeforeCreate(db *gorm.DB) error {
 	for {

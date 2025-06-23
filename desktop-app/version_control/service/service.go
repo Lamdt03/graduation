@@ -1,8 +1,6 @@
 package service
 
 import (
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/windows/svc"
 	"gorm.io/driver/sqlite"
@@ -10,8 +8,9 @@ import (
 	"graduation/desktop-app/controller"
 	"graduation/desktop-app/version_control/model"
 	"graduation/desktop-app/version_control/repository"
-	"net/http"
 
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"os"
 	"path/filepath"
 )
@@ -20,6 +19,50 @@ type FileMonitorService struct {
 	MonitorPath string
 	exit        chan struct{}
 }
+
+func server(fileMonitor *FileService) *fiber.App {
+	log.Info().Msgf("Starting server on %s\n", fileMonitor.MonitorPath)
+	app := fiber.New()
+	app.Use(cors.New())
+
+	app.Get("/file/versions", func(c *fiber.Ctx) error {
+		path := c.Query("filepath")
+		target := c.Query("target")
+
+		restoreDir, err := fileMonitor.RestoreAll(path)
+		if err != nil {
+			log.Printf("could not restore file %s: %v", path, err)
+		}
+
+		fullTextSearchController := controller.SearchController{}
+		locations, err := fullTextSearchController.SearchFullText(restoreDir, target)
+		if err != nil {
+			log.Printf("could not search file %s: %v", path, err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
+		if len(locations) == 0 {
+			locations = make([]controller.LocationsFile, 0)
+		}
+		return c.JSON(locations)
+	})
+
+	app.Get("/logs", func(c *fiber.Ctx) error {
+		backupLogs := make([]model.EventLog, 0)
+		for b := model.BackupLogsList.Front(); b != nil; b = b.Next() {
+			backupLogs = append(backupLogs, b.Value.(model.EventLog))
+		}
+		return c.JSON(backupLogs)
+	})
+
+	// Fiber handles server internally, but for compatibility, we create an http.Server
+
+	return app
+}
+
+var fiberApp *fiber.App
 
 func (f *FileMonitorService) run() {
 	// Lấy đường dẫn thư mục home
@@ -66,28 +109,11 @@ func (f *FileMonitorService) run() {
 	fileMonitor.StartMonitor()
 
 	//open port to restore file
-	router := gin.Default()
-	router.Use(cors.Default())
-	router.GET("/file/versions", func(ctx *gin.Context) {
-		path := ctx.Query("filepath")
-		target := ctx.Query("target")
-		restoreDir, err := fileMonitor.RestoreAll(path)
-		if err != nil {
-			log.Err(err).Msgf("could not restore file %s", path)
-		}
-		fullTextSearchController := controller.SearchController{}
-		locations, err := fullTextSearchController.SearchFullText(restoreDir, target)
-		if err != nil {
-			log.Err(err).Msgf("could not search file %s", path)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		ctx.JSON(http.StatusOK, locations)
-	})
+	fiberApp = server(fileMonitor)
 	go func() {
-		err := router.Run("127.0.0.1:9999")
+		err = fiberApp.Listen(":9999")
 		if err != nil {
-			log.Err(err).Msgf("could not start service")
+			log.Err(err).Msgf("could not start server")
 		}
 	}()
 	<-f.exit
@@ -115,6 +141,10 @@ func (f *FileMonitorService) Execute(args []string, r <-chan svc.ChangeRequest, 
 				s <- c.CurrentStatus
 			case svc.Stop, svc.Shutdown:
 				log.Info().Msg("Service stopping...")
+				err := fiberApp.Shutdown()
+				if err != nil {
+					log.Err(err).Msg("could not shutdown service")
+				}
 				// Tell SCM we're stopping
 				s <- svc.Status{State: svc.StopPending}
 				// Clean up resources

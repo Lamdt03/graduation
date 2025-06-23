@@ -3,6 +3,7 @@ package service
 import (
 	"code.sajari.com/docconv/v2"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"git.cystack.org/endpoint/dlp/file_monitor"
 	"github.com/rs/zerolog/log"
@@ -60,6 +61,15 @@ func (f *FileService) StartMonitor() {
 						continue
 					}
 				}
+				backupLog := model.EventLog{
+					Path:      inf.Path,
+					Event:     inf.Transition,
+					Timestamp: time.Now().Format("2006-01-02"),
+				}
+				if model.BackupLogsList.Len() == 100 {
+					model.BackupLogsList.Remove(model.BackupLogsList.Front())
+				}
+				model.BackupLogsList.PushBack(backupLog)
 				switch inf.Transition {
 				case "CREATE":
 					{
@@ -116,10 +126,17 @@ func (f *FileService) HandleMoveAction(oldPath string, newPath string) error {
 }
 
 func (f *FileService) HandleCreateAction(filepath string) error {
-	fi := model.NewFileInfo(filepath)
-	err := f.fiRepo.CreateFileInfo(fi)
+	_, err := f.fiRepo.GetFileInfo(filepath)
 	if err != nil {
-		return fmt.Errorf("CreateFileInfo error: %v", err)
+		if errors.Is(err, repository.FileNotFoundErrorCode) {
+			newFi := model.NewFileInfo(filepath)
+			err = f.fiRepo.CreateFileInfo(newFi)
+			if err != nil {
+				return fmt.Errorf("CreateFileInfo error: %v", err)
+			}
+		} else {
+			return fmt.Errorf("GetFileInfo error: %v", err)
+		}
 	}
 	return nil
 }
@@ -134,9 +151,9 @@ func (f *FileService) HandleDeleteAction(filepath string) error {
 }
 
 func (f *FileService) HandleWriteAction(sourceFile string) error {
-	fi, err := f.fiRepo.GetFileInfo(sourceFile)
+	fi, err := f.fiRepo.CreateFileIfNotExist(sourceFile)
 	if err != nil {
-		return fmt.Errorf("GetFileInfo error: %v", err)
+		return fmt.Errorf("CreateFileIfNotExist error: %v", err)
 	}
 	dirPath := filepath.Join(f.BackupDir, fi.ID)
 	if err := backupFile(sourceFile, dirPath); err != nil {

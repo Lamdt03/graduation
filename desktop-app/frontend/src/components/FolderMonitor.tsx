@@ -1,10 +1,20 @@
 import React, { useState } from "react";
 import {InstallService,OpenFolderDialog} from "../../wailsjs/go/main/App";
+import {controller} from "../../wailsjs/go/models";
+import { useEffect } from 'react';
+
+interface log{
+    path: string;
+    timestamp: string;
+    event: string;
+}
 
 const FolderMonitor: React.FC = () => {
     const [folderPath, setFolderPath] = useState<string>("");
     const [loading, setLoading] = useState<boolean>(false);
+    const [results, setResults] = useState<log[]>([]);
     const [errorMsg, setErrorMsg] = useState<string>("");
+    const [error, setError] = useState<string | null>(null);
 
     const handleSelectFolder = async () => {
         try {
@@ -42,6 +52,39 @@ const FolderMonitor: React.FC = () => {
             setLoading(false);
         }
     };
+
+    const handleLog = async () => {
+        try {
+            const response = await fetch(
+                `http://127.0.0.1:9999/logs`,
+                {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                    mode: 'cors',
+                }
+            );
+            if (!response.ok) throw new Error("can not get data.");
+            const data = await response.json();
+            if (data === null) return;
+            setResults(data);
+        } catch (error: any) {
+            console.error("log error:", error);
+            setResults([]);
+        }
+    }
+
+    useEffect(() => {
+        // Run handleSearch immediately
+        handleLog();
+
+        // Set up interval to run every 10 seconds
+        const intervalId = setInterval(() => {
+            handleLog();
+        }, 10000); // 10000ms = 10 seconds
+
+        // Cleanup interval on component unmount
+        return () => clearInterval(intervalId);
+    });
 
     return (
         <div className="folder-upload-page">
@@ -99,6 +142,44 @@ const FolderMonitor: React.FC = () => {
                     To monitor the folder, start up with <strong>Administrator</strong> privileges.
                 </p>
             </div>
+
+            <div className="result-container">
+                {results.length > 0 && (
+                    <>
+                        <div className="file-header">
+                            <div className="file-name">
+                                Folder Event ({results.length})
+                            </div>
+                        </div>
+                        <div className="table-container">
+                            <table className="excel-table">
+                                <thead>
+                                <tr>
+                                    <th>Filename</th>
+                                    <th>Event</th>
+                                    <th>Time</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {results.slice(0, 100).map((log, index) => (
+                                    <tr key={index}>
+                                        <td>{log.path || 'Unknown'}</td>
+                                        <td>{log.event || 'Unknown'}</td>
+                                        <td>{log.timestamp || 'Unknown'}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        {results.length > 100 && (
+                            <p className="file-stats">
+                                Showing first 100 results. {results.length - 100} more results not displayed.
+                            </p>
+                        )}
+                    </>
+                )}
+            </div>
+
         </div>
     );
 };

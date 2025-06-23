@@ -2,7 +2,6 @@ package main
 
 import (
 	"embed"
-	"errors"
 	"fmt"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -57,7 +56,7 @@ func main() {
 				Usage: "Get file monitor version",
 				Flags: []cli.Flag{},
 				Action: func(c *cli.Context) error {
-					fmt.Println("File-monitor", build.Version)
+					log.Info().Msgf("File-monitor %s", build.Version)
 					return nil
 				},
 			},
@@ -105,18 +104,13 @@ func main() {
 					if err != nil {
 						return fmt.Errorf("failed to get executable path: %v", err)
 					}
+					err = service.UninstallService()
+					if err != nil {
+						log.Error().Msgf("Failed to uninstall service: %v", err)
+					}
 					err = service.InstallService(binaryPath, c.String("path"))
 					if err != nil {
-						if !errors.Is(err, service.ServiceExistErr) {
-							return fmt.Errorf("failed to install service: %v", err)
-						} else {
-							startCmd := exec.Command("sc", "stop", common.SERVICE_NAME)
-							startOutput, err := startCmd.CombinedOutput()
-							if err != nil {
-								log.Error().Err(err).Msgf("start service fail %s", string(startOutput))
-								return err
-							}
-						}
+						return fmt.Errorf("failed to install service: %v", err)
 					}
 					binPath := fmt.Sprintf("\"%s\" service --path \"%s\"", binaryPath, c.String("path"))
 
@@ -131,10 +125,10 @@ func main() {
 					startCmd := exec.Command("sc", "start", common.SERVICE_NAME)
 					startOutput, err := startCmd.CombinedOutput()
 					if err != nil {
-						log.Error().Err(err).Msgf("stop service fail %s", string(startOutput))
+						log.Error().Err(err).Msgf("start service fail %s", string(startOutput))
 						return err
 					}
-					log.Info().Msgf("stop service success %s", string(startOutput))
+					log.Info().Msgf("start service success %s", string(startOutput))
 					return nil
 				},
 			},

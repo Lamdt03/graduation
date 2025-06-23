@@ -7,6 +7,8 @@ import (
 	"graduation/desktop-app/version_control/model"
 )
 
+var FileNotFoundErrorCode = errors.New("FILE_NOT_FOUND_ERROR_CODE")
+
 type FileInfoRepository struct {
 	Db *gorm.DB
 }
@@ -17,7 +19,7 @@ func NewFileInfoRepository(db *gorm.DB) *FileInfoRepository {
 	}
 }
 
-func (f *FileInfoRepository) GetFileInfo(filepath string) (*model.FileInfos, error) {
+func (f *FileInfoRepository) CreateFileIfNotExist(filepath string) (*model.FileInfos, error) {
 	var fi model.FileInfos
 	result := f.Db.Where("filepath = ?", filepath).First(&fi)
 	if result.Error != nil {
@@ -29,6 +31,18 @@ func (f *FileInfoRepository) GetFileInfo(filepath string) (*model.FileInfos, err
 			} else {
 				return &fi, nil
 			}
+		}
+		return nil, fmt.Errorf("GetFileInfo from db error: %v", result.Error)
+	}
+	return &fi, nil
+}
+
+func (f *FileInfoRepository) GetFileInfo(filepath string) (*model.FileInfos, error) {
+	var fi model.FileInfos
+	result := f.Db.Where("filepath = ?", filepath).First(&fi)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, FileNotFoundErrorCode
 		}
 		return nil, fmt.Errorf("GetFileInfo from db error: %v", result.Error)
 	}

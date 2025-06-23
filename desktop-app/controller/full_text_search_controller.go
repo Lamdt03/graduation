@@ -4,7 +4,6 @@ import (
 	"code.sajari.com/docconv/v2"
 	"fmt"
 	"github.com/blevesearch/bleve/v2"
-
 	"github.com/xuri/excelize/v2"
 	"os"
 	"path/filepath"
@@ -68,6 +67,8 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 		if err != nil || len(strings.TrimSpace(content)) == 0 {
 			return nil
 		}
+		content = strings.ToLower(content)
+		searchTerm = strings.ToLower(searchTerm)
 		doc := map[string]string{
 			"path":    path,
 			"content": content,
@@ -80,7 +81,7 @@ func (s *SearchController) SearchFullText(folderPath, searchTerm string) ([]Loca
 	}
 
 	// Search
-	query := bleve.NewQueryStringQuery(fmt.Sprintf("*%s*", searchTerm))
+	query := bleve.NewQueryStringQuery(searchTerm)
 	search := bleve.NewSearchRequestOptions(query, 1000, 0, false)
 	result, err := index.Search(search)
 
@@ -138,10 +139,6 @@ func extractContent(path string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		text := res.Body
-		if len(text) > 100_000 {
-			text = text[:100_000]
-		}
-		return text, nil
+		return res.Body, nil
 	}
 }

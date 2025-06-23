@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"graduation/desktop-app/version_control/common"
 	"log"
+	"os/exec"
 	"time"
 
 	"golang.org/x/sys/windows/svc"
@@ -113,6 +114,11 @@ func InstallService(execPath, monitorPath string) error {
 }
 
 func UninstallService() error {
+	stopCmd := exec.Command("sc", "stop", common.SERVICE_NAME)
+	stopOutput, err := stopCmd.CombinedOutput()
+	if err != nil {
+		log.Printf("start service fail %s\n", string(stopOutput))
+	}
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to service manager: %w", err)
@@ -124,7 +130,6 @@ func UninstallService() error {
 		return fmt.Errorf("could not access service: %w", err)
 	}
 	defer s.Close()
-
 	if err := s.Delete(); err != nil {
 		return fmt.Errorf("could not delete service: %w", err)
 	}
