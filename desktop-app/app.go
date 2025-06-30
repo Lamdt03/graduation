@@ -24,8 +24,35 @@ func NewApp() *App {
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
+	signalChan := make(chan bool, 1)
+	isUpdateChan := make(chan bool, 1)
 	a.ctx = ctx
-	update.AutoUpdate()
+	go func() {
+		select {
+		case <-signalChan:
+			{
+				result, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+					Type:          runtime.QuestionDialog,
+					Title:         "A new version of file-monitor is available",
+					Message:       "Would you like to install it now? We'll reopen windows for you",
+					DefaultButton: "Yes",
+				})
+
+				if err != nil {
+					isUpdateChan <- false
+					return
+				}
+				if result == "Yes" {
+					isUpdateChan <- true
+					return
+				} else {
+					isUpdateChan <- false
+					return
+				}
+			}
+		}
+	}()
+	update.AutoUpdate(signalChan, isUpdateChan)
 }
 
 var ErrNotElevated = fmt.Errorf("not running as administrator")

@@ -119,6 +119,7 @@ func UninstallService() error {
 	if err != nil {
 		log.Printf("start service fail %s\n", string(stopOutput))
 	}
+	time.Sleep(3 * time.Second)
 	m, err := mgr.Connect()
 	if err != nil {
 		return fmt.Errorf("failed to connect to service manager: %w", err)

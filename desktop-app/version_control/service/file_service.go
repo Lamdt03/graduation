@@ -52,6 +52,9 @@ func (f *FileService) StartMonitor() {
 					continue
 				}
 				log.Info().Msgf("new event: %s", inf.Path)
+				if strings.HasPrefix(inf.FileName, "~") {
+					continue
+				}
 				if !valiExcelExt[filepath.Ext(inf.Path)] {
 					if strings.HasPrefix(filepath.Base(inf.Path), "~") || strings.HasPrefix(filepath.Base(inf.Path), "$") {
 						continue
